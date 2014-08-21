@@ -1,0 +1,13 @@
+/**
+## Enum classes
+
+bq. See [Enum classes]
+*/
+
+enumClassBody
+  : "{" (enumEntry | memberDeclaration)* "}"
+  ;
+
+enumEntry
+  : modifiers SimpleName (":" initializer{","})? classBody?
+  ;

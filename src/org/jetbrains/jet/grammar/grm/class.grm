@@ -1,0 +1,65 @@
+/**
+## Classes
+
+bq. See [Classes and Inheritance]
+*/
+
+/*
+
+internal class Example<X, T : Comparable<X>>(protected val x : Foo<X, T>, y : Some)
+    : Bar(x), Foo<X, T> by x, IAbstractSome by y.asAbstract()
+    where
+      T : Function<Object, Object>
+{
+  // members
+}
+
+*/
+
+class
+  : modifiers ("class" | "trait") SimpleName
+      typeParameters?
+      modifiers ("(" functionParameter{","} ")")?
+      (":" annotations delegationSpecifier{","})?
+      typeConstraints
+      (classBody? | enumClassBody)
+  ;
+
+
+classBody
+  : ("{" memberDeclaration* "}")?
+  ;
+
+delegationSpecifier
+  : constructorInvocation // type and constructor arguments
+  : userType
+  : explicitDelegation
+  ;
+
+explicitDelegation
+  : userType "by" expression // internal this expression no foo {bar} is allowed
+  ;
+
+typeParameters
+  : "<" typeParameter{","} ">"
+  ;
+
+typeParameter
+  : modifiers SimpleName (":" userType)?
+  ;
+
+/**
+bq. See [Generic classes|Generics#Generic classes]
+*/
+
+typeConstraints
+  : ("where" typeConstraint{","})?
+  ;
+
+typeConstraint
+  : annotations SimpleName ":" type
+  : annotations "class" "object" SimpleName ":" type
+  ;
+/**
+bq. See [Generic constraints|Generics#Generic constraints]
+*/

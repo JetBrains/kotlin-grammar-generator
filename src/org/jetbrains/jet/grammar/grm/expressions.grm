@@ -1,0 +1,288 @@
+/**
+## Expressions
+
+bq. See [Expressions]
+
+### Precedence
+
+||*Precedence*||Title||Symbols||
+|Highest|Postfix|{{\+\+}}, {{\-\-}}, {{.}}, {{?.}}, {{?}}|
+| |Prefix|{{-}}, {{\+}}, {{\+\+}}, {{\-\-}}, {{!}}, [{{@label}}|#LabelName], {{@}}, {{@@}} |
+| |Type RHS|{{:}}, {{as}}, {{as?}} |
+| |Multiplicative|{{*}}, {{/}}, {{%}} |
+| |Additive|{{\+}}, {{-}} |
+| |Range|{{..}} |
+| |Infix function|[{{SimpleName}}|#SimpleName] |
+| |Elvis|{{?:}} |
+| |Named checks|{{in}}, {{\!in}}, {{is}}, {{\!is}} |
+| |Comparison|{{<}}, {{>}}, {{<=}}, {{>=}} |
+| |Equality|{{==}}, {{\!==}}|
+| |Conjunction|{{&&}}|
+| |Disjunction|{{\|\|}}|
+|Lowest|Assignment|{{=}}, {{+=}}, {{-=}}, {{*=}}, {{/=}}, {{%=}}|
+
+### Rules
+
+*/
+
+/*
+Decreasing precedence:
+  memberAccessOperation
+  postfixUnaryOperation
+  prefixUnaryOperation
+  multiplicativeOperation
+  additiveOperation
+  ".."
+  SimpleName
+  "?:"
+  namedInfixOrTypeOperation
+  comparisonOperation
+  equalityOperation
+  "&&"
+  "||"
+  assignmentOperator
+*/
+
+
+expression
+  : disjunction (assignmentOperator disjunction)*
+  ;
+
+disjunction
+  : conjunction ("||" conjunction)*
+  ;
+
+conjunction
+  : equalityComparison ("&&" equalityComparison)*
+  ;
+
+equalityComparison
+  : comparison (equalityOperation comparison)*
+  ;
+
+comparison
+  : namedInfix (comparisonOperation namedInfix)*
+  ;
+
+namedInfix
+  : elvisExpression (inOperation elvisExpression)*
+  : elvisExpression (isOperation isRHS)?
+  ;
+
+elvisExpression
+  : infixFunctionCall ("?:" infixFunctionCall)*
+  ;
+
+infixFunctionCall
+  : rangeExpression (SimpleName rangeExpression)*
+  ;
+
+rangeExpression
+  : additiveExpression (".." additiveExpression)*
+  ;
+
+additiveExpression
+  : multiplicativeExpression (additiveOperation multiplicativeExpression)*
+  ;
+
+multiplicativeExpression
+  : typeRHS (multiplicativeOperation typeRHS)*
+  ;
+
+typeRHS
+  : prefixUnaryExpression (typeOperation prefixUnaryExpression)*
+  ;
+
+prefixUnaryExpression
+  : prefixUnaryOperation* postfixUnaryExpression
+  ;
+
+postfixUnaryExpression
+  : atomicExpression postfixUnaryOperation*
+  : callableReference postfixUnaryOperation*
+  ;
+
+// TODO: callSuffix is forbidden after callableReference, since parentheses will be used to provide parameter types
+callableReference
+  : userType? "::" SimpleName
+  ;
+
+// !!! When you add here, remember to update the FIRST set in the parser
+atomicExpression
+  : "(" expression ")"
+  : literalConstant
+  : functionLiteral
+  : "this" label?
+  : "super" ("<" type ">")? label?
+  : if
+  : when
+  : try
+  : objectLiteral
+  : jump
+  : loop
+  : SimpleName
+  : FieldName
+  : "package" // for the root package
+  ;
+
+label
+  : "@"
+  : "@@"
+  : LabelName
+  ;
+
+literalConstant
+  : "true" | "false"
+  : stringTemplate
+  : NoEscapeString
+  : IntegerLiteral
+  : HexadecimalLiteral
+  : CharacterLiteral
+  : FloatLiteral
+  : "null"
+  ;
+
+stringTemplate
+  : "\"" stringTemplateElement* "\""
+  ;
+
+stringTemplateElement
+  : RegularStringPart
+  : ShortTemplateEntrySTART (SimpleName | "this")
+  : EscapeSequence
+  : longTemplate
+  ;
+
+longTemplate
+  : "${" expression "}"
+  ;
+
+isRHS
+  : type
+  ;
+
+declaration
+  : function
+  : property
+  : class
+  : typedef
+  : object
+  ;
+
+statement
+  : declaration
+  : expression
+  ;
+
+multiplicativeOperation
+  : "*" : "/" : "%"
+  ;
+
+additiveOperation
+  : "+" : "-"
+  ;
+
+inOperation
+  : "in" : "!in"
+  ;
+
+typeOperation
+  : "as" : "as?" : ":"
+  ;
+
+isOperation
+  : "is" : "!is"
+  ;
+
+comparisonOperation
+  : "<" : ">" : ">=" : "<="
+  ;
+
+equalityOperation
+  : "!=" : "=="
+  ;
+
+assignmentOperator
+  : "="
+  : "+=" : "-=" : "*=" : "/=" : "%="
+  ;
+
+prefixUnaryOperation
+  : "-" : "+"
+  : "++" : "--"
+  : "!"  // No ~
+  : annotations // mandatory
+  : label
+  ;
+
+postfixUnaryOperation
+  : "++" : "--" : "!!"
+  : callSuffix
+  : arrayAccess
+  : memberAccessOperation postfixUnaryExpression // TODO: Review
+  ;
+
+callSuffix
+  : typeArguments? valueArguments (label? functionLiteral)
+  : typeArguments (label? functionLiteral)
+  ;
+
+memberAccessOperation
+  : "." : "?." : "?"
+  ;
+
+typeArguments
+  : "<" type{","} ">"
+  ;
+
+valueArguments
+  : "(" (SimpleName "=")? "*"? expression{","} ")"
+  ;
+
+jump
+  : "throw" expression
+  : "return" label? expression?
+  : "continue" label?
+  : "break" label?
+// yield ?
+  ;
+
+// one can use "it" as a parameter name
+functionLiteral
+  : "{" statements "}"
+  : "{" (modifiers SimpleName){","} "->" statements "}"
+  : "{" (type ".")? "(" (modifiers SimpleName (":" type)?){","} ")" (":" type)? "->" statements "}"
+  ;
+
+statements
+  : SEMI* statement{SEMI+} SEMI*
+  ;
+
+constructorInvocation
+  : userType callSuffix
+  ;
+
+arrayAccess
+  : "[" expression{","} "]"
+  ;
+
+objectLiteral
+  : "object" (":" delegationSpecifier{","})? classBody // Cannot make class body optional: foo(object : F, A)
+  ;
+
+/* Factory methods:
+
+objectLiteral
+  : "object" delegationSpecifier{","} ("{" objectLiteralMember{","} "}")?
+  ;
+
+objectLiteralMember
+  : memberDeclaration
+  : factoryMethod
+  ;
+
+factoryMethod
+  : accessModifier? SimpleName typeParameters? functionParameters functionBody
+  ;
+
+*/

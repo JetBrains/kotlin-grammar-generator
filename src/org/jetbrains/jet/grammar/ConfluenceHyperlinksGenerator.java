@@ -18,16 +18,24 @@ package org.jetbrains.jet.grammar;
 
 import com.google.common.base.Supplier;
 import com.google.common.collect.*;
-import com.intellij.openapi.util.io.FileUtil;
+import org.apache.commons.io.FileUtils;
+import org.jetbrains.jet.grammar.tokens.*;
 
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.Marshaller;
+import javax.xml.bind.PropertyException;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.stream.StreamResult;
+import javax.xml.transform.stream.StreamSource;
 import java.awt.*;
 import java.awt.datatransfer.Clipboard;
 import java.awt.datatransfer.ClipboardOwner;
 import java.awt.datatransfer.StringSelection;
 import java.awt.datatransfer.Transferable;
-import java.io.File;
-import java.io.IOException;
-import java.io.Reader;
+import java.io.*;
 import java.util.*;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -51,16 +59,39 @@ public class ConfluenceHyperlinksGenerator {
             "lexical"
     );
 
-    public static void main(String[] args) throws IOException {
-        File grammarDir = new File("grammar/src");
+    public static void main(String[] args) throws IOException, TransformerException {
+
+        System.out.println("Checking cmd line arguments.");
+        if (args.length < 2)
+            throw new IllegalArgumentException("Usage: grammar-parser <path to grm files> <output file name>");
+
+        File grammarDir = new File(args[0]);
+        File outputFile = new File(args[1]);
+
+        if (!outputFile.exists()) {
+            if (!outputFile.createNewFile()) throw new IOException("Cannot create output file.");
+        }
 
         Set<File> used = new HashSet<File>();
         List<Token> tokens = getJoinedTokensFromAllFiles(grammarDir, used);
         assertAllFilesAreUsed(grammarDir, used);
+        System.out.println("Preparing resources.");
+        ClassLoader loader = ClassLoader.getSystemClassLoader();
 
-        StringBuilder result = generate(tokens);
+        StreamSource xml = new StreamSource(new StringReader(generate(tokens)));
+        StreamSource xsl = new StreamSource(loader.getResourceAsStream("convert.xsl"));
 
-        copyToClipboard(result);
+        System.setProperty("javax.xml.transform.TransformerFactory",
+                "net.sf.saxon.TransformerFactoryImpl");
+        StreamResult result = new StreamResult(outputFile);
+
+        System.out.println("Processing.");
+        TransformerFactory tFactory = TransformerFactory.newInstance();
+        Transformer transformer = tFactory.newTransformer(xsl);
+
+        transformer.transform(xml, result);
+        result.getOutputStream().close();
+        System.out.println("Done.");
     }
 
     private static List<Token> getJoinedTokensFromAllFiles(File grammarDir, Set<File> used) throws IOException {
@@ -68,7 +99,7 @@ public class ConfluenceHyperlinksGenerator {
         for (String fileName : FILE_NAMES_IN_ORDER) {
             File file = new File(grammarDir, fileName + "." + GRAMMAR_EXTENSION);
             used.add(file);
-            String text = FileUtil.loadFile(file, true);
+            String text = FileUtils.readFileToString(file, "UTF-8");
             StringBuilder textWithMarkedDeclarations = markDeclarations(text);
             List<Token> tokens = tokenize(createLexer(file.getPath(), textWithMarkedDeclarations));
             allTokens.addAll(tokens);
@@ -111,8 +142,8 @@ public class ConfluenceHyperlinksGenerator {
         return output;
     }
 
-    private static StringBuilder generate(List<Token> tokens) throws IOException {
-        StringBuilder result = new StringBuilder("h1. Contents\n").append("{toc:style=disc|indent=20px}");
+    private static String generate(List<Token> tokens) throws IOException {
+        StringWriter result = new StringWriter();
 
         Set<String> declaredSymbols = new HashSet<String>();
         Set<String> usedSymbols = new HashSet<String>();
@@ -125,13 +156,12 @@ public class ConfluenceHyperlinksGenerator {
         });
 
         Declaration lastDeclaration = null;
-        for (Token advance: tokens) {
+        for (Token advance : tokens) {
             if (advance instanceof Declaration) {
                 Declaration declaration = (Declaration) advance;
                 lastDeclaration = declaration;
                 declaredSymbols.add(declaration.getName());
-            }
-            else if (advance instanceof Identifier) {
+            } else if (advance instanceof Identifier) {
                 Identifier identifier = (Identifier) advance;
                 assert lastDeclaration != null;
                 usages.put(identifier.getName(), lastDeclaration.getName());
@@ -139,39 +169,27 @@ public class ConfluenceHyperlinksGenerator {
             }
         }
 
-        for (Token token : tokens) {
-            if (token instanceof Declaration) {
-                Declaration declaration = (Declaration) token;
-                result.append("{anchor:").append(declaration.getName()).append("}");
-                if (!usedSymbols.contains(declaration.getName())) {
-                    //                    result.append("(!) *Unused!* ");
-                    System.out.println("Unused: " + tokenWithPosition(token));
-                }
-                Collection<String> myUsages = usages.get(declaration.getName());
-                if (!myUsages.isEmpty()) {
-                    result.append("\\[{color:grey}Used by ");
-                    for (Iterator<String> iterator = myUsages.iterator(); iterator.hasNext(); ) {
-                        String usage = iterator.next();
-                        result.append("[#").append(usage).append("]");
-                        if (iterator.hasNext()) {
-                            result.append(", ");
-                        }
-                    }
-                    result.append("{color}\\]\n");
-                }
-                result.append(token);
-                continue;
-            }
-            else if (token instanceof Identifier) {
-                Identifier identifier = (Identifier) token;
-                if (!declaredSymbols.contains(identifier.getName())) {
-                    result.append("(!) *Undeclared!* ");
-                    System.out.println("Undeclared: " + tokenWithPosition(token));
-                }
-            }
-            result.append(token);
+
+        try {
+
+            JAXBContext context =
+                    JAXBContext.newInstance(Annotation.class, Comment.class, Declaration.class, DocComment.class,
+                            Identifier.class, Other.class, StringToken.class, SymbolToken.class, Token.class,
+                            WhiteSpace.class, TokenList.class);
+            Marshaller m = context.createMarshaller();
+            TokenList list = new TokenList(tokens);
+            list.updateUsages(usedSymbols, usages);
+            m.marshal(list, result);
+
+        } catch (PropertyException e) {
+            e.printStackTrace();
+        } catch (JAXBException e) {
+            e.printStackTrace();
         }
-        return result;
+
+        result.flush();
+        result.close();
+        return result.toString();
     }
 
     private static String tokenWithPosition(Token token) {

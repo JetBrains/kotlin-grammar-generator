@@ -1,0 +1,16 @@
+/**
+## Annotations
+*/
+
+annotations
+  : annotation*
+  ;
+
+annotation
+  : "[" annotationEntry+ "]"
+  : annotationEntry
+  ;
+
+annotationEntry
+  : SimpleName{"."} typeArguments? valueArguments?
+  ;

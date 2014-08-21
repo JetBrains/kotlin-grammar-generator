@@ -1,0 +1,23 @@
+/**
+## Pattern matching
+
+bq. See [Pattern matching]
+*/
+
+when
+  : "when" ("(" (modifiers "val" SimpleName "=")? expression ")")? "{"
+        whenEntry*
+    "}"
+  ;
+
+// TODO : consider empty after ->
+whenEntry
+  : whenCondition{","} "->" expression SEMI
+  : "else" "->" expression SEMI
+  ;
+
+whenCondition
+  : expression
+  : ("in" | "!in") expression
+  : ("is" | "!is") isRHS
+  ;

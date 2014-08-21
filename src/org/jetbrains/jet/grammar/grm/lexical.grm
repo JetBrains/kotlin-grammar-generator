@@ -1,0 +1,134 @@
+/**
+## Lexical structure
+*/
+
+[helper]
+Digit
+  : ["0".."9"];
+
+IntegerLiteral
+  : Digit+?
+
+FloatLiteral
+  : <java double literal>;
+
+[helper]
+HexDigit
+  : Digit | ["A".."F", "a".."f"];
+
+HexadecimalLiteral
+  : "0x" HexDigit+;
+
+CharacterLiteral
+  : <character as in Java>;
+
+/**
+bq. See [Basic types]
+*/
+
+StringWithTemplates
+  : <single-quoted string, $ can be escaped>;
+
+NoEscapeString
+  : <"""-quoted string>;
+
+/**
+bq. See [String templates|Strings#Templates]
+*/
+
+SEMI
+  : <semicolon or newline>;
+
+
+SimpleName
+  : <java identifier>
+  : "`" <java identifier> "`"
+  ;
+
+/**
+bq. See [Java interoperability]
+*/
+
+FieldName
+  : "$" SimpleName;
+
+/**
+bq. See [Properties And Fields]
+*/
+
+LabelName
+  : "@" SimpleName;
+
+/**
+bq. See [Nonlocal returns and jumps]
+*/
+
+/* Symbols:
+
+[](){}<>
+,
+.
+:
+<= >= == != === !==
++ - * / %
+=
++= -= *= /= %=
+++ -- !
+&& ||  -- may be just & and |
+=>
+..
+?
+?:
+?.
+*/
+
+/* Keywords:
+package
+as
+type
+class
+this
+val
+var
+fun
+extension
+for
+null
+typeof
+new
+true
+false
+is
+in
+throw
+return
+break
+continue
+object
+if
+else
+while
+do
+when
+out
+ref
+try
+
+Soft:
+where -- in class, function and type headers
+by -- in a class header (Delegation specifier)
+get, set -- in a property definition
+import
+final
+abstract
+enum
+open
+annotation
+override
+private
+public
+internal
+protected
+catch
+finally
+*/
