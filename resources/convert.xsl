@@ -42,6 +42,7 @@
                                         </slice>
                                     </xsl:variable>
                                     <xsl:variable name="indexOfThis" select="position()"/>
+                                    <xsl:copy-of select="preceding-sibling::doc[count(following-sibling::declaration)=$total - ($indexOfThis - 1)]" copy-namespaces="no"/>
                                     <item>
                                         <xsl:copy-of select="preceding-sibling::annotation[count(following-sibling::declaration)=$total - ($indexOfThis - 1)]" copy-namespaces="no"/>
                                         <xsl:copy-of select="." copy-namespaces="no"/>
@@ -50,7 +51,9 @@
                                                 and count(./following-sibling::declaration)=$total - $indexOfThis]"/>
                                         </description>
                                     </item>
-                                    <xsl:copy-of select="$nextSlice/slice/doc[count(./following-sibling::declaration)=$total - $indexOfThis]"/>
+                                    <xsl:if test="position()=last()">
+                                        <xsl:copy-of select="$nextSlice/slice/doc[count(./following-sibling::declaration)=$total - $indexOfThis]"/>
+                                    </xsl:if>
                                 </xsl:for-each>
                             </xsl:when>
                             <xsl:otherwise>
@@ -119,9 +122,9 @@
             </xsl:otherwise>
         </xsl:choose>
     </xsl:template>
-    
-    <xsl:template match="token[@xsi:type=('docComment','comment')]">
-        <xsl:element name="{if (matches(./text/text(),'[\n\r]')) then 'doc' else 'comment'}">
+
+    <xsl:template match="token[@xsi:type=('docComment')]">
+        <xsl:element name="doc">
             <xsl:copy-of select="@file-name" copy-namespaces="no"/>
             <xsl:value-of select="replace(replace(replace(replace(replace(./text/text(),'/\*{1,2}',''),'\*/',''),'&amp;([a-z]+)','$1'),'^[ \s\t]+',''),'[ \s\t]+$','')"/>
         </xsl:element>
