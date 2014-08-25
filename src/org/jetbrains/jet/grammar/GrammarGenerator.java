@@ -41,7 +41,7 @@ import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class ConfluenceHyperlinksGenerator {
+public class GrammarGenerator {
 
     private static final String GRAMMAR_EXTENSION = "grm";
     private static final List<String> FILE_NAMES_IN_ORDER = Arrays.asList(
