@@ -5,7 +5,7 @@
     exclude-result-prefixes="#all"
     version="2.0">
     
-    <xsl:output method="xml" encoding="UTF-8" indent="yes" omit-xml-declaration="no" cdata-section-elements="comment string doc"/>
+    <xsl:output method="xml" encoding="UTF-8" indent="yes" omit-xml-declaration="no" cdata-section-elements="comment string symbol doc"/>
     
     <xsl:template match="/">
         <xsl:variable name="firstPassTempTree">
