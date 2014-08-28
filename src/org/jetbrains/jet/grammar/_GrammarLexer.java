@@ -643,7 +643,7 @@ class _GrammarLexer {
                 case 12:
                     break;
                 case 6: {
-                    return new SymbolToken("\\" + yytext().toString(), fileName, line);
+                    return new SymbolToken(yytext().toString(), fileName, line);
                 }
                 case 13:
                     break;
