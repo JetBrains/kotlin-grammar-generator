@@ -76,7 +76,8 @@ public class GrammarGenerator {
         List<Token> tokens = getJoinedTokensFromAllFiles(grammarDir, used);
         assertAllFilesAreUsed(grammarDir, used);
         System.out.println("Preparing resources.");
-        ClassLoader loader = ClassLoader.getSystemClassLoader();
+        
+        ClassLoader loader = GrammarGenerator.class.getClassLoader();
 
         StreamSource xml = new StreamSource(new StringReader(generate(tokens)));
         StreamSource xsl = new StreamSource(loader.getResourceAsStream("convert.xsl"));
