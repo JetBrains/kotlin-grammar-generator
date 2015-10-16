@@ -85,7 +85,7 @@ public class GrammarGenerator {
                 "net.sf.saxon.TransformerFactoryImpl");
         StreamResult result = new StreamResult(outputFile);
 
-        System.out.println("Processing.");
+        System.out.println("Processing with XSL " + xsl.getSystemId());
         TransformerFactory tFactory = TransformerFactory.newInstance();
         Transformer transformer = tFactory.newTransformer(xsl);
 
