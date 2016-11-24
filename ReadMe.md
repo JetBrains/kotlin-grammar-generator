@@ -1,1 +1,1 @@
-This module contains a semi-formal description of Kotlin grammar along with some code that translates it into a confluence wiki format.
+This is a tool to translate the [Kotlin grammar definition](https://github.com/JetBrains/kotlin/tree/master/grammar) to the grammar.xml file used to generate the [grammar reference](http://kotlinlang.org/docs/reference/grammar.html) on the Kotlin Web site.
