@@ -55,7 +55,7 @@ public class GrammarGenerator {
             "expressions",
             "when",
             "modifiers",
-            "attributes",
+            "annotations",
             "lexical"
     );
 
